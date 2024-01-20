@@ -1,65 +1,89 @@
-import React, { useState } from "react";
-import { Table } from "antd";
+import { useState } from "react";
+
+const CustomTable = ({ columns, data }) => {
+  if (!data || data.length === 0) {
+    return <p>No data available.</p>;
+  }
+
+  return (
+    <table style={{ borderCollapse: "collapse", width: "100%" }}>
+      <tbody>
+        {data.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {columns.map((column, columnIndex) => (
+              <td key={columnIndex} style={tableCellStyle}>
+                {row[column]}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
+const tableCellStyle = {
+  border: "1px solid #ddd",
+  padding: "8px",
+  textAlign: "left",
+};
 
 const App = () => {
-  const [jsonFile, setJsonFile] = useState(null);
-  const [columns, setColumns] = useState([]);
-  console.log(jsonFile);
-  console.log(columns);
-  
-  function flattenObject(ob, parentKey = "") {
-    let toReturn = {};
-  
-    for (let i in ob) {
-      if (!ob.hasOwnProperty(i)) continue;
-  
-      let key = parentKey ? `${parentKey}.${i}` : i;
-  
-      if (Array.isArray(ob[i])) {
-        // Handle arrays by converting each element to a flat object
-        ob[i].forEach((item, index) => {
-          let arrayKey = `${key}[${index}]`;
-          if (typeof item === "object" && item !== null) {
-            let flatObject = flattenObject(item, arrayKey);
-            toReturn = { ...toReturn, ...flatObject };
-          } else {
-            toReturn[arrayKey] = item;
-          }
-        });
-      } else if (typeof ob[i] === "object" && ob[i] !== null) {
-        // Recursively flatten nested objects
-        let flatObject = flattenObject(ob[i], key);
-        toReturn = { ...toReturn, ...flatObject };
-      } else {
-        toReturn[key] = ob[i];
-      }
-    }
-    return toReturn;
-  }
-  
+  const [jsonData, setJsonData] = useState(null);
+  const [allValues, setAllValues] = useState([]);
+  const [tableColumns, setTableColumns] = useState([]);
 
-  const handleFileUpload = (e) => {
+  console.log(allValues);
+  console.log(jsonData);
+
+  const handleFileChange = (e) => {
     const fileReader = new FileReader();
     fileReader.readAsText(e.target.files[0], "UTF-8");
     fileReader.onload = (e) => {
-      const jsonData = JSON.parse(e.target.result);
-      let flattenedData = flattenObject(jsonData);
-      let columns = Object.keys(flattenedData).map((key) => ({
-        title: key,
-        dataIndex: key,
-        key: key,
-      }));
+      const fileContent = e.target.result;
 
-      setJsonFile([flattenedData]);
-      setColumns(columns);
+      try {
+        const parsedData = JSON.parse(fileContent);
+        setJsonData(parsedData);
+
+        const values = getAllValues(parsedData);
+        setAllValues(values);
+
+        const columns = Object.keys(parsedData[0]);
+        setTableColumns(columns);
+      } catch (error) {
+        console.error("Invalid JSON file");
+      }
     };
   };
 
+  function getAllValues(obj) {
+    let values = [];
+    for (const key in obj) {
+      if (typeof obj[key] === "object") {
+        const nestedValues = getAllValues(obj[key]);
+        values = values.concat(nestedValues);
+      } else {
+        values.push(obj[key]);
+      }
+    }
+    return values;
+  }
+
   return (
     <div>
-      <input type="file" onChange={handleFileUpload} />
+      <input type="file" onChange={handleFileChange} />
 
-      {jsonFile && <Table dataSource={jsonFile} columns={columns} />}
+      {jsonData && (
+        <div>
+          <h3>All Values:</h3>
+          <ul>
+            {allValues.map((value, index) => (
+              <li key={index}>{value}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
