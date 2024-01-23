@@ -1,20 +1,17 @@
 import { useState } from "react";
 
-const CustomTable = ({ columns, data }) => {
-  if (!data || data.length === 0) {
+const CustomTable = ({ keyValuePairs }) => {
+  if (!keyValuePairs || keyValuePairs.length === 0) {
     return <p>No data available.</p>;
   }
 
   return (
     <table style={{ borderCollapse: "collapse", width: "100%" }}>
       <tbody>
-        {data.map((row, rowIndex) => (
+        {keyValuePairs.map(({ key, value }, rowIndex) => (
           <tr key={rowIndex}>
-            {columns.map((column, columnIndex) => (
-              <td key={columnIndex} style={tableCellStyle}>
-                {row[column]}
-              </td>
-            ))}
+            <td style={tableCellStyle}>{key}</td>
+            <td style={tableCellStyle}>{value}</td>
           </tr>
         ))}
       </tbody>
@@ -31,10 +28,9 @@ const tableCellStyle = {
 const App = () => {
   const [jsonData, setJsonData] = useState(null);
   const [allValues, setAllValues] = useState([]);
-  const [tableColumns, setTableColumns] = useState([]);
+  const [keyValuePairs, setKeyValuePairs] = useState([]);
 
-  console.log(allValues);
-  console.log(jsonData);
+  console.log(keyValuePairs);
 
   const handleFileChange = (e) => {
     const fileReader = new FileReader();
@@ -46,28 +42,27 @@ const App = () => {
         const parsedData = JSON.parse(fileContent);
         setJsonData(parsedData);
 
-        const values = getAllValues(parsedData);
-        setAllValues(values);
-
-        const columns = Object.keys(parsedData[0]);
-        setTableColumns(columns);
+        const pairs = getAllKeyValuePairs(parsedData);
+        setKeyValuePairs(pairs);
       } catch (error) {
         console.error("Invalid JSON file");
       }
     };
   };
 
-  function getAllValues(obj) {
-    let values = [];
+  function getAllKeyValuePairs(obj, parentKey = "") {
+    let pairs = [];
     for (const key in obj) {
+      const currentKey = parentKey ? `${parentKey}.${key}` : key;
+
       if (typeof obj[key] === "object") {
-        const nestedValues = getAllValues(obj[key]);
-        values = values.concat(nestedValues);
+        const nestedPairs = getAllKeyValuePairs(obj[key], currentKey);
+        pairs = pairs.concat(nestedPairs);
       } else {
-        values.push(obj[key]);
+        pairs.push({ key: currentKey, value: obj[key] });
       }
     }
-    return values;
+    return pairs;
   }
 
   return (
@@ -76,12 +71,8 @@ const App = () => {
 
       {jsonData && (
         <div>
-          <h3>All Values:</h3>
-          <ul>
-            {allValues.map((value, index) => (
-              <li key={index}>{value}</li>
-            ))}
-          </ul>
+          <h3>All Key-Value Pairs:</h3>
+          <CustomTable keyValuePairs={keyValuePairs} />
         </div>
       )}
     </div>
